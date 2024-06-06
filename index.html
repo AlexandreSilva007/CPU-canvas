@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <script>
+        const fpmsTime= 20; /*refresh*/
+        const dirChangeTime = 1000; /* tempo (ms) para que as linhas mudem a direção*/
+        const delta = 2; /*velocidade do crescimento das linhas (independente da direção)*/
+        const qtdLines = 5;
+        const lastPos = new Array(qtdLines);
+        const myImage = new Image();
+        myImage.src = "cpu-1.png";
+        const intervalHandles = new Array(2);
+
+        window.onload = () => {
+            const cv = document.getElementById('canvas');
+            const w = cv.width = window.screen.width; /*largura do canvas, pode ser qq uma*/
+            const h = cv.height = window.screen.height; /*altura do canvas, pode ser qq uma*/
+            const ctx = cv.getContext('2d');
+            const posx = w * 0.5 - w * 0.05; /* posição x da imagem do centro*/
+            const posy = h * 0.5 - h * 0.1; /* posição y da imagem do centro*/
+            const rw = w * 0.1; /* largura desejada da imagem (quadrado)*/
+
+            ctx.lineWidth = "6"; /*largura das linhas */
+            ctx.shadowColor = "white"; /* brilho */
+            
+            /*Desenha imagem no centro do canvas*/
+            drawCenterImage(ctx,rw,posx,posy);
+
+            /* espaço entre cada fio de cada lado (qtd fios)*/
+            let step = rw / qtdLines;
+            /* calcual posição inicial de cada fio*/
+            initLines(step,rw,posx,posy);
+
+            /* Desenha conexões (esferas)*/
+            drawConnections(ctx,step);
+
+            /* desenha linhas a cada fpmsTime ms*/
+            intervalHandles[0] = setInterval(() => { drawLines(ctx); }, fpmsTime);
+            /* atualiza direçõa das linhas a cada dirChangeTime ms*/
+            intervalHandles[1] = setInterval( updateDirections, dirChangeTime);
+        }
+
+
+        function initLines(step,rw,posx,posy){
+            let count = step * 0.5;
+            for (let i = 0; i < qtdLines; i++) {
+                lastPos[i] = {
+                top: { x: count + posx, y: posy, dir: 0 },
+                bottom: { x: count + posx, y: posy + rw, dir: 0 },
+                left: { x: posx, y: posy + count, dir: 0 },
+                right: { x: posx + rw, y: posy + count, dir: 0 }
+                };
+                count += step;
+            }
+        }
+
+        function drawCenterImage(ctx,rw,posx,posy){
+            ctx.translate(posx, posy);ctx.scale(rw/myImage.width,rw/myImage.width);
+            ctx.drawImage(myImage, 0, 0);
+            ctx.scale(myImage.width/rw,myImage.width/rw);
+            ctx.translate(-posx, -posy);
+        }
+
+        function checkStop(){
+            if (lastPos[0].left.x < 0 && lastPos[0].top.y < 0){
+                console.log('stop');
+                clearInterval(intervalHandles[0]);
+                clearInterval(intervalHandles[1]);
+            }
+        }
+
+        function drawLines(ctx) {
+            ctx.strokeStyle = '#ffff00';
+            ctx.shadowBlur = Math.floor(Math.random() * 5) + 5;
+            for (let i = 0; i < qtdLines; i++) {
+                ctx.strokeStyle = ctx.strokeStyle == '#ffff00' ? '#ffff88' : '#ffff00';
+                drawTop(ctx, i);
+                drawBottom(ctx, i);
+                drawLeft(ctx,i);
+                drawRight(ctx,i);
+            }
+            checkStop();
+        }
+
+        function drawConnections(ctx, step) {
+            ctx.fillStyle = '#ffff00';
+            for (let i = 0; i < qtdLines; i++) {
+                ctx.beginPath();
+                ctx.arc(lastPos[i].top.x, lastPos[i].top.y, step * 0.25, 0, 2 * Math.PI);
+                ctx.fill();
+
+                ctx.beginPath();
+                ctx.arc(lastPos[i].bottom.x, lastPos[i].bottom.y, step * 0.25, 0, 2 * Math.PI);
+                ctx.fill();
+
+                ctx.beginPath();
+                ctx.arc(lastPos[i].left.x, lastPos[i].left.y, step * 0.25, 0, 2 * Math.PI);
+                ctx.fill();
+
+                ctx.beginPath();
+                ctx.arc(lastPos[i].right.x, lastPos[i].right.y, step * 0.25, 0, 2 * Math.PI);
+                ctx.fill();
+            }
+        }
+
+
+        function drawTop(ctx, i) {
+            ctx.beginPath();
+            ctx.moveTo(lastPos[i].top.x, lastPos[i].top.y);
+            if (lastPos[i].top.dir == 0) {
+                ctx.lineTo(lastPos[i].top.x, lastPos[i].top.y - delta);
+                lastPos[i].top.y = lastPos[i].top.y - delta;
+            }
+            else {
+                ctx.lineTo(lastPos[i].top.x - lastPos[i].top.dir * delta, lastPos[i].top.y);
+                lastPos[i].top.x = lastPos[i].top.x - lastPos[i].top.dir * delta;
+            }
+            ctx.stroke();
+        }
+
+        function drawBottom(ctx, i) {
+            ctx.beginPath();
+            ctx.moveTo(lastPos[i].bottom.x, lastPos[i].bottom.y);
+            if (lastPos[i].bottom.dir == 0) {
+                ctx.lineTo(lastPos[i].bottom.x, lastPos[i].bottom.y + delta);
+                lastPos[i].bottom.y = lastPos[i].bottom.y + delta;
+            }
+            else {
+                ctx.lineTo(lastPos[i].bottom.x - lastPos[i].bottom.dir * delta, lastPos[i].bottom.y);
+                lastPos[i].bottom.x = lastPos[i].bottom.x - lastPos[i].bottom.dir * delta;
+            }
+            ctx.stroke();
+        }
+
+        function drawLeft(ctx, i) {
+            ctx.beginPath();
+            ctx.moveTo(lastPos[i].left.x, lastPos[i].left.y);
+            if (lastPos[i].left.dir == 0) {
+                ctx.lineTo(lastPos[i].left.x - delta, lastPos[i].left.y);
+                lastPos[i].left.x = lastPos[i].left.x - delta;
+            }
+            else {
+                ctx.lineTo(lastPos[i].left.x, lastPos[i].left.y - lastPos[i].left.dir * delta);
+                lastPos[i].left.y = lastPos[i].left.y - lastPos[i].left.dir * delta;
+            }
+            ctx.stroke();
+        }
+
+        function drawRight(ctx, i) {
+            ctx.beginPath();
+            ctx.moveTo(lastPos[i].right.x, lastPos[i].right.y);
+            if (lastPos[i].right.dir == 0) {
+                ctx.lineTo(lastPos[i].right.x + delta, lastPos[i].right.y);
+                lastPos[i].right.x = lastPos[i].right.x + delta;
+            }
+            else {
+                ctx.lineTo(lastPos[i].right.x, lastPos[i].right.y - lastPos[i].right.dir * delta);
+                lastPos[i].right.y = lastPos[i].right.y - lastPos[i].right.dir * delta;
+            }
+            ctx.stroke();
+        }
+
+        function updateDirections(){
+            for (let index = 0; index < qtdLines; index++) {
+                    lastPos[index].top.dir = lastPos[index].top.dir == 0 ? (Math.floor(Math.random() * 3) - 1) : 0;
+                    lastPos[index].bottom.dir = lastPos[index].bottom.dir == 0 ? (Math.floor(Math.random() * 3) - 1) : 0;
+                    lastPos[index].left.dir = lastPos[index].left.dir == 0 ? (Math.floor(Math.random() * 3) - 1) : 0;
+                    lastPos[index].right.dir = lastPos[index].right.dir == 0 ? (Math.floor(Math.random() * 3) - 1) : 0;
+                }
+        }
+
+    </script>
+</head>
+
+<body>
+    <canvas id="canvas" style="background-color: rgba(0, 0, 0, 0.724)"></canvas>
+</body>
+
+</html>
